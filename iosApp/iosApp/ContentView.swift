@@ -235,6 +235,9 @@ final class RootComposeViewController: UIViewController {
         refreshContainingTabBarVisibility()
         refreshImmersiveSystemUI()
         setInteractiveContentPopGestureEnabled(false)
+        if #available(iOS 16.0, *) {
+            NuvioTrackpadBackGesture.shared.install(in: view.window)
+        }
         if let tabBarController {
             onTabBarControllerAvailable?(tabBarController)
         }
@@ -964,6 +967,7 @@ final class AppNavigationCoordinator: ObservableObject {
 
     init() {
         PlayerPictureInPictureParking.shared.appCoordinator = self
+        NuvioTrackpadBackGesture.shared.appCoordinator = self
         setTabBarVisible(true)
         reloadTabBarBehavior()
         reloadLiveTvTabVisibility()
@@ -1978,6 +1982,146 @@ struct NativeNavContentView: View {
         ) { _ in
             appCoordinator.reloadLiveTvTabVisibility()
         }
+    }
+}
+
+// MARK: - iPad trackpad back swipe
+
+/// Two-finger swipe on an iPad trackpad (Magic Keyboard / Magic Trackpad) goes back, everywhere:
+/// closes the open menu/dialog/sheet/panel first (same as Android's back button), otherwise pops
+/// the current screen.
+@available(iOS 16.0, *)
+@MainActor
+final class NuvioTrackpadBackGesture: NSObject, UIGestureRecognizerDelegate {
+    static let shared = NuvioTrackpadBackGesture()
+
+    /// -1 = fingers move LEFT to go back. Set to 1 to use a right swipe instead.
+    private static let backDirection: CGFloat = -1
+    private static let triggerDistance: CGFloat = 90
+    private static let flickDistance: CGFloat = 40
+    private static let flickVelocity: CGFloat = 650
+    private static let horizontalDominance: CGFloat = 1.6
+    private static let cooldown: CFTimeInterval = 0.4
+
+    weak var appCoordinator: AppNavigationCoordinator?
+
+    private let installedWindows = NSHashTable<UIWindow>.weakObjects()
+    private var didHandleCurrentGesture = false
+    private var lastBackTime: CFTimeInterval = 0
+
+    func install(in window: UIWindow?) {
+        guard let window, !installedWindows.contains(window) else { return }
+        let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
+        recognizer.allowedScrollTypesMask = .continuous // trackpad two-finger scroll only
+        recognizer.allowedTouchTypes = [] // never react to finger touches on the screen
+        recognizer.cancelsTouchesInView = false
+        recognizer.delaysTouchesBegan = false
+        recognizer.delaysTouchesEnded = false
+        recognizer.delegate = self
+        window.addGestureRecognizer(recognizer)
+        installedWindows.add(window)
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+
+    @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            didHandleCurrentGesture = false
+            NuvioBackGestureKt.nuvioBackGestureBegan()
+        case .changed:
+            guard !didHandleCurrentGesture else { return }
+            let translation = recognizer.translation(in: recognizer.view)
+            let velocity = recognizer.velocity(in: recognizer.view)
+            let distance = translation.x * Self.backDirection
+            guard distance > 0,
+                  abs(translation.x) >= abs(translation.y) * Self.horizontalDominance else { return }
+            let isLongSwipe = distance >= Self.triggerDistance
+            let isFlick = distance >= Self.flickDistance &&
+                velocity.x * Self.backDirection >= Self.flickVelocity
+            guard isLongSwipe || isFlick else { return }
+            didHandleCurrentGesture = true
+            // A horizontal row/pager under the pointer is scrolling: let it scroll instead.
+            guard !NuvioBackGestureKt.nuvioBackGestureBlockedByHorizontalScroll() else { return }
+            let now = CACurrentMediaTime()
+            guard now - lastBackTime >= Self.cooldown else { return }
+            lastBackTime = now
+            performBack(from: recognizer)
+        default:
+            didHandleCurrentGesture = false
+        }
+    }
+
+    private func performBack(from recognizer: UIPanGestureRecognizer) {
+        guard let window = recognizer.view as? UIWindow ?? recognizer.view?.window else { return }
+
+        // 1. Native profile switcher popover.
+        if let appCoordinator, appCoordinator.isProfileSwitcherPresented {
+            appCoordinator.isProfileSwitcherPresented = false
+            return
+        }
+
+        // 2. Other native modals (alerts etc.). Nuvio sheets are handled by Compose below,
+        //    and file pickers keep their own Cancel button so their callback still fires.
+        if let presented = topPresentedController(in: window),
+           !NuvioBackGestureKt.isNuvioNativeBottomSheet(controller: presented) {
+            if !(presented is UIDocumentPickerViewController),
+               !presented.isBeingDismissed,
+               !presented.isModalInPresentation {
+                presented.dismiss(animated: true)
+            }
+            return
+        }
+
+        // 3. Compose: sheets, dialogs, menus, player panels, in-screen pages…
+        let candidates = controllersUnderPointer(in: window, at: recognizer.location(in: window))
+        if NuvioBackGestureKt.dispatchNuvioBackGesture(candidateControllers: candidates) {
+            return
+        }
+
+        // 4. Pop the current screen.
+        popCurrentScreen()
+    }
+
+    private func popCurrentScreen() {
+        guard let appCoordinator, appCoordinator.isAppReady else { return }
+        let coordinator = appCoordinator.coordinator(for: appCoordinator.selectedTab)
+        guard let top = coordinator.path.last else { return }
+        let parking = PlayerPictureInPictureParking.shared
+        if parking.isParked(top.route) {
+            parking.closeParked()
+        } else {
+            coordinator.pop()
+        }
+    }
+
+    private func topPresentedController(in window: UIWindow) -> UIViewController? {
+        var top = window.rootViewController?.presentedViewController
+        while let next = top?.presentedViewController {
+            top = next
+        }
+        return top
+    }
+
+    private func controllersUnderPointer(in window: UIWindow, at point: CGPoint) -> [UIViewController] {
+        var controllers: [UIViewController] = []
+        let probes = [point, CGPoint(x: window.bounds.midX, y: window.bounds.midY)]
+        for probe in probes {
+            var responder: UIResponder? = window.hitTest(probe, with: nil)
+            while let current = responder {
+                if let controller = current as? UIViewController,
+                   !controllers.contains(where: { $0 === controller }) {
+                    controllers.append(controller)
+                }
+                responder = current.next
+            }
+        }
+        return controllers
     }
 }
 

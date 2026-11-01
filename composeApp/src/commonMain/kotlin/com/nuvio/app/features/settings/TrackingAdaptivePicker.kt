@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -127,6 +128,7 @@ private fun <T> TrackingPickerDialog(
     onDismiss: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    IosBackHandler(onBack = onDismiss)
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier

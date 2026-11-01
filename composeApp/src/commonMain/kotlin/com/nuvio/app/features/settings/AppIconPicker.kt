@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -151,6 +152,7 @@ private fun AppIconPickerDialog(
     onDismiss: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    IosBackHandler(onBack = onDismiss)
     BasicAlertDialog(onDismissRequest = onDismiss) {
         Surface(
             modifier = Modifier

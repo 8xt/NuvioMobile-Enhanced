@@ -1,5 +1,6 @@
 package com.nuvio.app.features.profiles
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -296,6 +297,7 @@ fun ProfileSwitcherTab(
             var opensBelow by remember { mutableStateOf(popupBelowAnchor) }
             var availableHeight by remember { mutableStateOf<Dp?>(null) }
             val dismissPopup = { if (pinProfile != null) pinProfile = null else showPopup = false }
+            IosBackHandler(onBack = dismissPopup)
             Popup(
                 popupPositionProvider = remember(density, popupBelowAnchor) {
                     ProfilePopupPositionProvider(
@@ -501,6 +503,7 @@ fun NativeProfileSwitcherPopup(
                 .width(anchorWidth),
         ) {
             if (popupVisible && profiles.isNotEmpty() && !isSwitchingProfile) {
+                IosBackHandler(onBack = onDismissRequest)
                 Popup(
                     alignment = Alignment.BottomCenter,
                     offset = IntOffset(0, with(density) { -NuvioTokens.Space.s64.roundToPx() }),

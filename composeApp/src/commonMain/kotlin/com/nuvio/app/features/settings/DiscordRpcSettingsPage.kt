@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -508,6 +509,7 @@ private fun DiscordLoginDialog(
     onDismiss: () -> Unit,
     onTokenReceived: (String) -> Unit,
 ) {
+    IosBackHandler(onBack = onDismiss)
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),

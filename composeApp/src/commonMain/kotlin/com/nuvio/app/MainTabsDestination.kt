@@ -79,7 +79,8 @@ internal fun MainTabsDestination(
     onProfileSelected: (NuvioProfile) -> Unit,
     onAddProfileRequested: () -> Unit,
 ) {
-    PlatformBackHandler(enabled = true, onBack = onBack)
+    // iOS native navigation has no "back" at a tab root (avoids the Android exit prompt).
+    PlatformBackHandler(enabled = !useNativeNavigation, onBack = onBack)
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isTabletLayout = useTabletFloatingTabBar || maxWidth >= 768.dp

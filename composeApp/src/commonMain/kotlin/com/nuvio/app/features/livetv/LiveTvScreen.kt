@@ -1,5 +1,6 @@
 package com.nuvio.app.features.livetv
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -623,6 +624,7 @@ private fun LiveTvCategoryFilterChip(
             )
         }
 
+        IosBackHandler(enabled = expanded) { expanded = false }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },

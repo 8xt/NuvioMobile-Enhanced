@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -457,6 +458,7 @@ private fun PlayerLiveChannelCategoryFilterChip(
                 modifier = Modifier.size(18.dp),
             )
         }
+        IosBackHandler(enabled = expanded) { expanded = false }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },

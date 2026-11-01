@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ internal fun PlayerSpeedPopup(
     val positionProvider = remember(gapPx) { AboveAnchorPositionProvider(gapPx) }
     val accent = MaterialTheme.nuvio.colors.accent
 
+    IosBackHandler(onBack = onDismiss)
     Popup(
         popupPositionProvider = positionProvider,
         onDismissRequest = onDismiss,

@@ -1,12 +1,16 @@
 package com.nuvio.app
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
 import com.nuvio.app.core.ui.LocalFold
 import com.nuvio.app.core.ui.LocalVerticalBarPadding
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
+import com.nuvio.app.core.ui.nuvioBackGestureScrollTracking
 import com.nuvio.app.features.profiles.ProfileBiometricAuth
 import com.nuvio.app.navigation.AppRoute
 import platform.UIKit.UIColor
@@ -96,14 +100,16 @@ fun AppGateViewController(
     },
     content = {
         CompositionLocalProvider(LocalVerticalBarPadding provides verticalBar.padding) {
-            AppGateOverlay(
-                onActivate = { tab -> onActivate(tab.name) },
-                onAppReady = onAppReady,
-                onMainContentMountChanged = onMainContentMountChanged,
-                onMainContentVisibleChanged = onMainContentVisibleChanged,
-                nativeProfileSwitcherController = nativeProfileSwitcherController,
-                appGateController = appGateController,
-            )
+            NuvioBackGestureRoot {
+                AppGateOverlay(
+                    onActivate = { tab -> onActivate(tab.name) },
+                    onAppReady = onAppReady,
+                    onMainContentMountChanged = onMainContentMountChanged,
+                    onMainContentVisibleChanged = onMainContentVisibleChanged,
+                    nativeProfileSwitcherController = nativeProfileSwitcherController,
+                    appGateController = appGateController,
+                )
+            }
         }
     },
 ).apply {
@@ -121,10 +127,22 @@ private fun nuvioComposeViewController(
         CompositionLocalProvider(
             LocalVerticalBarPadding provides verticalBar.padding,
             LocalFold provides hinge.fold,
-            content = content,
-        )
+        ) {
+            NuvioBackGestureRoot(content)
+        }
     },
 ).apply {
     ProfileBiometricAuth.initialize(this)
     view.backgroundColor = nuvioBackgroundColor
+}
+
+/** Root wrapper that lets the iPad trackpad back swipe know when a horizontal row is scrolling. */
+@androidx.compose.runtime.Composable
+private fun NuvioBackGestureRoot(content: @androidx.compose.runtime.Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize().nuvioBackGestureScrollTracking(),
+        propagateMinConstraints = true,
+    ) {
+        content()
+    }
 }

@@ -40,6 +40,7 @@ fun Menu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    IosBackHandler(enabled = expanded, onBack = onDismissRequest)
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,

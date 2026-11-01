@@ -1,5 +1,6 @@
 package com.nuvio.app.features.library
 
+import com.nuvio.app.core.ui.IosBackHandler
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.animation.Crossfade
@@ -1574,6 +1575,7 @@ private fun LibraryReleaseCalendarPanel(
         else -> null
     }
     val selectedDate = parseLibraryCalendarDate(selectedDateIso)
+    IosBackHandler(onBack = onDismiss)
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(

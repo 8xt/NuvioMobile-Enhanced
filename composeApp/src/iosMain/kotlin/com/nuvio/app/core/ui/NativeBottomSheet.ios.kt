@@ -95,6 +95,7 @@ internal actual fun NuvioNativeModalBottomSheet(
                         Column(
                             modifier = latestModifier.value
                                 .fillMaxSize()
+                                .nuvioBackGestureScrollTracking()
                                 .background(latestContainerColor.value)
                                 .padding(top = NuvioTokens.Space.s20),
                         ) {
@@ -164,6 +165,20 @@ internal actual fun dismissNativeNuvioBottomSheet() {
     )
 }
 
+internal fun activeNuvioNativeBottomSheetForBackGesture(): UIViewController? =
+    activeNativeBottomSheet?.takeIf { it.presentingViewController != null }
+
+/** Closes the active sheet as if the user swiped it down, so its onDismissRequest still runs. */
+internal fun dismissNativeNuvioBottomSheetFromBackGesture(): Boolean {
+    val sheet = activeNuvioNativeBottomSheetForBackGesture() ?: return false
+    val delegate = activeNativeBottomSheetDelegate
+    sheet.dismissViewControllerAnimated(
+        flag = true,
+        completion = { delegate?.notifyDismissed() },
+    )
+    return true
+}
+
 private class NuvioNativeBottomSheetDelegate(
     private val onDismissRequest: () -> Unit,
 ) : NSObject(), UIAdaptivePresentationControllerDelegateProtocol {
@@ -173,7 +188,7 @@ private class NuvioNativeBottomSheetDelegate(
         notifyDismissed()
     }
 
-    private fun notifyDismissed() {
+    fun notifyDismissed() {
         if (didNotifyDismissal) return
         didNotifyDismissal = true
         onDismissRequest()

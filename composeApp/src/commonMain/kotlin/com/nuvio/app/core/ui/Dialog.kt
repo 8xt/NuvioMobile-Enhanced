@@ -53,6 +53,7 @@ fun DialogSurface(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    IosBackHandler(onBack = onDismissRequest)
     BasicAlertDialog(onDismissRequest = onDismissRequest, properties = properties) {
         Surface(
             modifier = modifier
