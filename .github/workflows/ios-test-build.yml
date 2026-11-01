@@ -69,6 +69,14 @@ jobs:
             printf 'CONTRIBUTIONS_URL=%s\n' "${CONTRIBUTIONS_URL}" >> local.properties
           fi
 
+      - name: Create empty local.properties when no secrets are configured
+        if: env.RELEASE_PROPERTIES_BASE64 == ''
+        run: |
+          touch local.properties
+          if [[ -n "${CONTRIBUTIONS_URL}" ]]; then
+            printf 'CONTRIBUTIONS_URL=%s\n' "${CONTRIBUTIONS_URL}" >> local.properties
+          fi
+
       - name: Constrain Gradle memory for the hosted runner
         run: |
           gradle_user_home="${GRADLE_USER_HOME:-${HOME}/.gradle}"
