@@ -1995,8 +1995,9 @@ struct NativeNavContentView: View {
 final class NuvioTrackpadBackGesture: NSObject, UIGestureRecognizerDelegate {
     static let shared = NuvioTrackpadBackGesture()
 
-    /// -1 = fingers move LEFT to go back. Set to 1 to use a right swipe instead.
-    private static let backDirection: CGFloat = -1
+    /// Sign of the scroll translation that means "back". With iPadOS trackpad scrolling,
+    /// fingers moving LEFT report a positive x translation, so 1 = swipe left goes back.
+    private static let backDirection: CGFloat = 1
     private static let triggerDistance: CGFloat = 90
     private static let flickDistance: CGFloat = 40
     private static let flickVelocity: CGFloat = 650
